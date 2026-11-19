@@ -1,0 +1,14 @@
+{
+  "name": "vidora",
+  "version": "3.0.0",
+  "description": "VIDORA video downloader",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "cors": "^2.8.5",
+    "express": "^5.1.0",
+    "ipaddr.js": "^2.2.0"
+  }
+}

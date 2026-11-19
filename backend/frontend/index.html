@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>VIDORA - Video Downloader</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="background-glow"></div>
+
+  <header class="navbar">
+    <a href="#" class="logo">VIDO<span>RA</span></a>
+    <span class="nav-tag">VIDEO DOWNLOADER</span>
+  </header>
+
+  <main>
+    <section class="hero">
+      <div class="eyebrow"><span></span> SIMPLE. FAST. SECURE.</div>
+      <h1>Download Videos<br><span>Your Way.</span></h1>
+      <p class="subtitle">
+        Paste a direct video link and download your video in its available quality.
+      </p>
+
+      <div class="download-card">
+        <label for="videoUrl">VIDEO URL</label>
+
+        <div class="input-wrap">
+          <span class="link-icon">↗</span>
+          <input
+            type="url"
+            id="videoUrl"
+            placeholder="Paste your direct video link here..."
+            autocomplete="url"
+          >
+          <button id="pasteBtn" class="paste-btn" type="button">PASTE</button>
+        </div>
+
+        <div class="actions">
+          <button id="previewBtn" class="preview-btn" type="button">
+            Preview Video
+          </button>
+          <button id="downloadBtn" class="download-btn" type="button">
+            Download Video <span>↓</span>
+          </button>
+        </div>
+
+        <div id="status" class="status" aria-live="polite">
+          Supports direct HTTPS video links. Only download content you have permission to save.
+        </div>
+
+        <div id="videoArea" class="video-area hidden">
+          <video id="videoPlayer" controls playsinline></video>
+        </div>
+      </div>
+
+      <div class="quality-note">
+        <span>✓</span> Original available quality
+        <span class="dot">•</span>
+        No fake quality options
+      </div>
+    </section>
+
+    <section class="features">
+      <article class="feature-card">
+        <div class="feature-icon">↗</div>
+        <h3>Easy to Use</h3>
+        <p>Paste a direct video link and start your download.</p>
+      </article>
+
+      <article class="feature-card">
+        <div class="feature-icon">◇</div>
+        <h3>Original Quality</h3>
+        <p>Download the original file without pretending to upscale it.</p>
+      </article>
+
+      <article class="feature-card">
+        <div class="feature-icon">⌁</div>
+        <h3>Simple & Secure</h3>
+        <p>Designed for direct video links over secure HTTPS connections.</p>
+      </article>
+    </section>
+  </main>
+
+  <footer>
+    <a href="#" class="footer-logo">VIDO<span>RA</span></a>
+    <p>Download responsibly. Respect content ownership and platform rules.</p>
+    <p class="copyright">© 2026 VIDORA. All rights reserved.</p>
+  </footer>
+
+  <script src="script.js"></script>
+</body>
+</html>
