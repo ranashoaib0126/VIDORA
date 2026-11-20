@@ -4,26 +4,19 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<meta name="theme-color" content="#080d18">
-<meta name="description" content="VIDORA - A simple and modern video downloader experience.">
-<title>VIDORA | Video Experience</title>
+<meta name="theme-color" content="#050b19">
+<title>VIDORA | Future of Video</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="./style.css">
 </head>
 <body>
 
-<div class="background-effects">
-    <div class="grid-background"></div>
-    <div class="glow glow-one"></div>
-    <div class="glow glow-two"></div>
-    <div class="particles">
-        <span class="particle"></span><span class="particle"></span>
-        <span class="particle"></span><span class="particle"></span>
-        <span class="particle"></span><span class="particle"></span>
-        <span class="particle"></span>
-    </div>
+<div class="scene">
+    <div class="grid-floor"></div>
+    <div class="orb orb-one"></div>
+    <div class="orb orb-two"></div>
+    <div class="particles" id="particles"></div>
 </div>
 
 <header>
@@ -31,84 +24,112 @@
     <nav>
         <a href="#home">Home</a>
         <a href="#downloader">Downloader</a>
+        <a href="#features">Features</a>
         <a href="#about">About</a>
     </nav>
-    <a href="#downloader" class="header-btn">Get Started</a>
+    <a href="#downloader" class="header-btn">Get Started ↗</a>
 </header>
 
 <main>
 <section class="hero" id="home">
     <div class="hero-content">
-        <p class="tagline">THE NEXT VIDEO EXPERIENCE</p>
-        <h1>Your Videos.<br><span>Your Freedom.</span></h1>
+        <div class="eyebrow"><span class="live-dot"></span> THE FUTURE OF VIDEO</div>
+        <h1>Experience<br>Video <span>Without Limits.</span></h1>
         <p class="hero-description">
-            A clean and simple experience for checking supported video links.
+            A smarter, cleaner and modern way to access your supported video files.
+            Experience the next generation of video convenience.
         </p>
-        <a href="#downloader" class="primary-btn">Get Started <span>→</span></a>
+        <div class="hero-actions">
+            <a href="#downloader" class="primary-btn">Start Exploring <span>→</span></a>
+            <a href="#about" class="secondary-btn">Discover VIDORA</a>
+        </div>
+        <div class="hero-stats">
+            <div><strong>01</strong><small>Simple</small></div>
+            <div><strong>02</strong><small>Modern</small></div>
+            <div><strong>03</strong><small>Convenient</small></div>
+        </div>
     </div>
-    <div class="hero-visual">
-        <div class="play-circle">▶</div>
-        <div class="visual-label">VIDEO MADE SIMPLE</div>
+
+    <div class="hero-art">
+        <div class="orbit orbit-a"></div>
+        <div class="orbit orbit-b"></div>
+        <div class="orbit orbit-c"></div>
+        <div class="core">
+            <div class="core-inner">▶</div>
+        </div>
+        <div class="floating-chip chip-one">✦ VIDEO ENGINE</div>
+        <div class="floating-chip chip-two">HD EXPERIENCE</div>
+        <div class="floating-chip chip-three">VIDORA 01</div>
     </div>
 </section>
 
 <section class="downloader-section" id="downloader">
-    <p class="tagline">VIDEO DOWNLOADER</p>
-    <h2 class="section-title">Download Your Video</h2>
-    <p class="section-description">
-        Paste a direct video file URL to download supported content.
-    </p>
+    <div class="section-heading">
+        <span class="eyebrow">YOUR VIDEO STARTS HERE</span>
+        <h2>Make It <span>Yours.</span></h2>
+        <p>Paste a direct video file URL to get started.</p>
+    </div>
 
     <div class="downloader-card">
-        <label for="videoUrl">Video URL</label>
+        <div class="card-top">
+            <div class="card-icon">▶</div>
+            <div>
+                <h3>Video Downloader</h3>
+                <p>Enter your supported video link below</p>
+            </div>
+            <span class="secure-badge">● SECURE</span>
+        </div>
+
+        <label for="videoUrl">VIDEO URL</label>
         <div class="input-row">
             <input type="url" id="videoUrl"
                 placeholder="https://example.com/video.mp4"
                 autocomplete="url">
-            <button id="downloadBtn" type="button">Download →</button>
+            <button id="downloadBtn" type="button">Download <span>→</span></button>
         </div>
+
         <p id="message" class="message" aria-live="polite"></p>
-        <p class="secure-note">
-            Currently supports direct public HTTPS video file links.
-            Only download content you own or have permission to use.
-        </p>
+        <div class="card-footer">
+            <span>🔒 Secure connection</span>
+            <span>Direct video links supported</span>
+        </div>
     </div>
 </section>
 
-<section class="platform-section">
-    <p class="tagline">LINK COMPATIBILITY</p>
-    <h2 class="section-title">Simple. Secure. Convenient.</h2>
-    <p class="section-description">
-        VIDORA currently supports direct video file links, not social-media page links.
-    </p>
-    <div class="platform-grid">
-        <div class="platform-card">
-            <div class="platform-icon">▶</div>
-            <h3>Direct Video</h3>
-            <p>Public HTTPS video file links</p>
-        </div>
-        <div class="platform-card">
-            <div class="platform-icon">HD</div>
-            <h3>Source Quality</h3>
-            <p>Original file quality where available</p>
-        </div>
-        <div class="platform-card">
-            <div class="platform-icon">🔒</div>
-            <h3>Safer Requests</h3>
-            <p>HTTPS links and server-side validation</p>
-        </div>
+<section class="features-section" id="features">
+    <div class="section-heading">
+        <span class="eyebrow">DESIGNED FOR SIMPLICITY</span>
+        <h2>Technology Meets <span>Experience.</span></h2>
+    </div>
+
+    <div class="feature-grid">
+        <article class="feature-card">
+            <div class="feature-icon">✦</div>
+            <h3>Modern Experience</h3>
+            <p>A clean and futuristic interface built around simplicity.</p>
+        </article>
+        <article class="feature-card">
+            <div class="feature-icon">◈</div>
+            <h3>Easy To Use</h3>
+            <p>Paste a supported direct video URL and get started.</p>
+        </article>
+        <article class="feature-card">
+            <div class="feature-icon">⌁</div>
+            <h3>Secure Requests</h3>
+            <p>HTTPS-only links with server-side validation.</p>
+        </article>
     </div>
 </section>
 
 <section class="about-section" id="about">
     <div>
-        <p class="tagline">ABOUT VIDORA</p>
-        <h2>Built For A Better Video Experience.</h2>
+        <span class="eyebrow">ABOUT VIDORA</span>
+        <h2>Beyond Ordinary.<br><span>Built For Tomorrow.</span></h2>
     </div>
     <p>
-        VIDORA provides a modern interface for downloading supported
-        direct video files. Platform restrictions and content-owner
-        permissions always apply.
+        VIDORA brings together a futuristic interface and a convenient
+        experience for supported direct video files. Download access
+        depends on the source and content-owner permissions.
     </p>
 </section>
 </main>
