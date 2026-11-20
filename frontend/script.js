@@ -1,183 +1,72 @@
 
-const express = require("express");
-const cors = require("cors");
+const videoInput = document.getElementById("videoUrl");
+const downloadButton = document.getElementById("downloadBtn");
+const message = document.getElementById("message");
 
-const app = express();
-const PORT = process.env.PORT || 10000;
-
-app.use(cors());
-app.use(express.json({ limit: "1mb" }));
-
-// Only allow this verified test host for now.
-// Add other trusted hosts only after checking them.
-const ALLOWED_HOSTS = [
-    "www.w3schools.com"
-];
-
-const MAX_FILE_SIZE = 100 * 1024 * 1024; // 100 MB
-
-function validateVideoUrl(value) {
-    try {
-        const url = new URL(value);
-
-        if (url.protocol !== "https:") {
-            return null;
-        }
-
-        if (!ALLOWED_HOSTS.includes(url.hostname.toLowerCase())) {
-            return null;
-        }
-
-        if (!url.pathname.toLowerCase().endsWith(".mp4")) {
-            return null;
-        }
-
-        return url;
-    } catch {
-        return null;
-    }
+function showMessage(text, type = "") {
+    message.textContent = text;
+    message.className = "message " + type;
 }
 
-// Backend status
-app.get("/", (req, res) => {
-    res.send("VIDORA Backend is Running!");
-});
+downloadButton.addEventListener("click", async () => {
+    const videoUrl = videoInput.value.trim();
 
-// Direct video file download
-app.post("/api/file-download", async (req, res) => {
+    if (!videoUrl) {
+        showMessage("Please paste a video URL first.", "error");
+        videoInput.focus();
+        return;
+    }
+
+    let parsedUrl;
+
     try {
-        const { url } = req.body;
+        parsedUrl = new URL(videoUrl);
+    } catch {
+        showMessage("Please enter a valid video URL.", "error");
+        return;
+    }
 
-        if (!url) {
-            return res.status(400).json({
-                success: false,
-                message: "Please provide a video URL."
-            });
-        }
+    if (parsedUrl.protocol !== "https:") {
+        showMessage("Only secure HTTPS video links are accepted.", "error");
+        return;
+    }
 
-        const videoUrl = validateVideoUrl(url);
+    downloadButton.disabled = true;
+    downloadButton.textContent = "Checking...";
+    showMessage("Checking your video link...");
 
-        if (!videoUrl) {
-            return res.status(400).json({
-                success: false,
-                message: "This video host is not approved for downloading."
-            });
-        }
-
-        const upstream = await fetch(videoUrl.href, {
-            redirect: "error",
-            signal: AbortSignal.timeout(60000)
+    try {
+        const response = await fetch("/api/file-download", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ url: videoUrl })
         });
 
-        if (!upstream.ok) {
-            return res.status(502).json({
-                success: false,
-                message: "Video host could not provide the file."
-            });
+        if (!response.ok) {
+            const data = await response.json().catch(() => ({}));
+            throw new Error(data.error || "This link could not be downloaded.");
         }
 
-        const contentType =
-            upstream.headers.get("content-type") || "";
+        const blob = await response.blob();
+        const objectUrl = URL.createObjectURL(blob);
+        const link = document.createElement("a");
 
-        if (!contentType.toLowerCase().startsWith("video/")) {
-            return res.status(415).json({
-                success: false,
-                message: "The provided link is not a video file."
-            });
-        }
+        link.href = objectUrl;
+        link.download = "vidora-video.mp4";
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
 
-        const contentLength = Number(
-            upstream.headers.get("content-length") || 0
-        );
-
-        if (contentLength > MAX_FILE_SIZE) {
-            return res.status(413).json({
-                success: false,
-                message: "Video exceeds the 100 MB test limit."
-            });
-        }
-
-        const buffer = Buffer.from(
-            await upstream.arrayBuffer()
-        );
-
-        if (buffer.length > MAX_FILE_SIZE) {
-            return res.status(413).json({
-                success: false,
-                message: "Video exceeds the 100 MB test limit."
-            });
-        }
-
-        res.setHeader("Content-Type", contentType);
-        res.setHeader(
-            "Content-Disposition",
-            'attachment; filename="vidora-video.mp4"'
-        );
-        res.setHeader("Content-Length", buffer.length);
-
-        return res.send(buffer);
-
+        setTimeout(() => URL.revokeObjectURL(objectUrl), 60000);
+        showMessage("Your download has started!", "success");
     } catch (error) {
-        console.error("Download Error:", error);
-
-        return res.status(500).json({
-            success: false,
-            message: "Download failed. Please try again."
-        });
+        showMessage(error.message || "Something went wrong. Please try another direct video link.", "error");
+    } finally {
+        downloadButton.disabled = false;
+        downloadButton.textContent = "Download →";
     }
 });
 
-// Social platform link validation only
-function detectPlatform(value) {
-    try {
-        const url = new URL(value);
-
-        if (url.protocol !== "https:") return null;
-
-        const host = url.hostname.toLowerCase();
-
-        if (
-            host === "youtube.com" ||
-            host.endsWith(".youtube.com") ||
-            host === "youtu.be"
-        ) return "YouTube";
-
-        if (
-            host === "tiktok.com" ||
-            host.endsWith(".tiktok.com")
-        ) return "TikTok";
-
-        if (
-            host === "instagram.com" ||
-            host.endsWith(".instagram.com")
-        ) return "Instagram";
-
-        return null;
-
-    } catch {
-        return null;
-    }
-}
-
-app.post("/api/download", (req, res) => {
-    const { url } = req.body;
-    const platform = url ? detectPlatform(url) : null;
-
-    if (!platform) {
-        return res.status(400).json({
-            success: false,
-            message: "Unsupported or invalid video link."
-        });
-    }
-
-    return res.json({
-        success: true,
-        platform,
-        downloadAvailable: false,
-        message: "An authorized video provider is required for this platform."
-    });
-});
-
-app.listen(PORT, () => {
-    console.log(`VIDORA server running on port ${PORT}`);
+videoInput.addEventListener("keydown", event => {
+    if (event.key === "Enter") downloadButton.click();
 });
