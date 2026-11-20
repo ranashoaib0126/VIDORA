@@ -1,52 +1,68 @@
-
+﻿
 const express = require("express");
 const path = require("path");
+const os = require("os");
+const fs = require("fs");
 const dns = require("dns").promises;
 const net = require("net");
-const { Readable, Transform } = require("stream");
-const { pipeline } = require("stream/promises");
+const { spawn, execFile } = require("child_process");
+const { promisify } = require("util");
 
+const execFileAsync = promisify(execFile);
+const YTDLP_EXECUTABLE = process.platform === "win32" ? "yt-dlp" : path.join(__dirname, "yt-dlp");
+const FFMPEG_PATH = require("ffmpeg-static");
 const app = express();
 
-app.use(express.json({ limit: "10kb" }));
+app.use(express.json({ limit: "20kb" }));
 
-// Local development: serve frontend files from public
-// Vercel serves public assets separately.
-if (process.env.VERCEL !== "1") {
-    app.use(express.static(path.join(__dirname, "public")));
-}
+const PUBLIC_DIR = path.resolve(__dirname, "public");
 
-// Check whether an IPv4 address is publicly routable
+console.log("VIDORA PUBLIC FOLDER:", PUBLIC_DIR);
+
+app.use(express.static(PUBLIC_DIR));
+
+app.get("/", (req, res) => {
+    res.sendFile(path.join(PUBLIC_DIR, "index.html"));
+});
+
+app.get("/index.html", (req, res) => {
+    res.sendFile(path.join(PUBLIC_DIR, "index.html"));
+});
+app.get("/", (req, res) => {
+    res.sendFile(path.join(__dirname, "public", "index.html"));
+});
+
+app.get("/index.html", (req, res) => {
+    res.sendFile(path.join(__dirname, "public", "index.html"));
+});
+
+app.get("/style.css", (req, res) => {
+    res.sendFile(path.join(__dirname, "public", "style.css"));
+});
+
+app.get("/script.js", (req, res) => {
+    res.sendFile(path.join(__dirname, "public", "script.js"));
+});
+
+const MAX_DOWNLOAD_BYTES = 500 * 1024 * 1024;
+
 function isPublicIPv4(ip) {
     if (!net.isIPv4(ip)) return false;
+    const [a, b, c] = ip.split(".").map(Number);
 
-    const p = ip.split(".").map(Number);
-    const a = p[0];
-    const b = p[1];
-    const c = p[2];
-
-    if (
-        a === 0 ||
-        a === 10 ||
-        a === 127 ||
-        a >= 224 ||
+    return !(
+        a === 0 || a === 10 || a === 127 || a >= 224 ||
         (a === 100 && b >= 64 && b <= 127) ||
         (a === 169 && b === 254) ||
         (a === 172 && b >= 16 && b <= 31) ||
         (a === 192 && b === 168) ||
-        (a === 192 && b === 0 && c === 0) ||
-        (a === 192 && b === 0 && c === 2) ||
+        (a === 192 && b === 0) ||
         (a === 198 && (b === 18 || b === 19)) ||
         (a === 198 && b === 51 && c === 100) ||
         (a === 203 && b === 0 && c === 113)
-    ) {
-        return false;
-    }
-
-    return true;
+    );
 }
 
-// Validate direct video URL
 async function validateVideoURL(value) {
     let url;
 
@@ -56,12 +72,12 @@ async function validateVideoURL(value) {
         throw new Error("Please enter a valid video URL.");
     }
 
-    if (url.protocol !== "https:") {
-        throw new Error("Only HTTPS video links are supported.");
+    if (!["https:", "http:"].includes(url.protocol)) {
+        throw new Error("Only HTTP and HTTPS links are supported.");
     }
 
     if (url.username || url.password) {
-        throw new Error("Links containing login credentials are not supported.");
+        throw new Error("Links containing login details are not supported.");
     }
 
     const hostname = url.hostname.toLowerCase();
@@ -71,173 +87,206 @@ async function validateVideoURL(value) {
         hostname.endsWith(".localhost") ||
         hostname.endsWith(".local")
     ) {
-        throw new Error("This video host is not allowed.");
+        throw new Error("This website address is not allowed.");
     }
 
-    // Reject IP literals unless they are public IPv4 addresses
     if (net.isIP(hostname)) {
         if (!isPublicIPv4(hostname)) {
-            throw new Error("This video host is not allowed.");
+            throw new Error("This website address is not allowed.");
         }
     } else {
-        const records = await dns.lookup(hostname, { all: true });
+        const records = await dns.lookup(hostname, { all: true, family: 4 });
 
-        if (
-            !records.length ||
-            records.some(record => !isPublicIPv4(record.address))
-        ) {
-            throw new Error("This video host is not allowed.");
+        if (!records.length || records.some(r => !isPublicIPv4(r.address))) {
+            throw new Error("This website address is not allowed.");
         }
     }
 
-    return url;
+    return url.href;
 }
 
-// Health check
+function runYtDlp(args, timeout = 60000, maxBuffer = 20 * 1024 * 1024) {
+    const targetUrl = String(args[args.length - 1] || "");
+    let cookieArgs = [];
+
+    try {
+        const host = new URL(targetUrl).hostname.toLowerCase();
+
+        if (
+            process.platform === "win32" &&
+            (host === "instagram.com" || host.endsWith(".instagram.com"))
+        ) {
+            cookieArgs = ["--cookies-from-browser", "chrome"];
+        }
+    } catch {}
+
+    const ffmpegArgs = FFMPEG_PATH
+        ? ["--ffmpeg-location", FFMPEG_PATH]
+        : [];
+
+    return execFileAsync(
+        YTDLP_EXECUTABLE,
+        ["--force-ipv4", ...ffmpegArgs, ...cookieArgs, ...args],
+        {
+            timeout,
+            maxBuffer,
+            windowsHide: true
+        }
+    );
+}
+
 app.get("/api/health", (req, res) => {
     res.json({
         success: true,
         app: "VIDORA",
-        status: "running"
+        status: "running",
+        downloader: "yt-dlp"
     });
 });
 
-// Video download API
-app.post("/api/file-download", async (req, res) => {
-    let controller;
-
+app.post("/api/video-info", async (req, res) => {
     try {
         const input = req.body?.url;
 
         if (typeof input !== "string" || !input.trim()) {
-            return res.status(400).json({
-                error: "Please provide a video URL."
-            });
+            return res.status(400).json({ error: "Please paste a video link." });
         }
 
         const url = await validateVideoURL(input.trim());
 
-        controller = new AbortController();
+        const { stdout } = await runYtDlp([
+            "--dump-single-json",
+            "--no-playlist",
+            "--no-warnings",
+            "--socket-timeout", "20",
+            url
+        ]);
 
-        const timeout = setTimeout(() => {
-            controller.abort();
-        }, 45000);
+        const info = JSON.parse(stdout);
 
-        let response;
+        const heights = [...new Set(
+            (info.formats || [])
+                .filter(f => f.height && f.height <= 2160)
+                .map(f => f.height)
+        )].sort((a, b) => b - a);
 
-        try {
-            response = await fetch(url, {
-                method: "GET",
-                redirect: "error",
-                signal: controller.signal,
-                headers: {
-                    "User-Agent": "VIDORA/1.0"
-                }
-            });
-        } finally {
-            clearTimeout(timeout);
+        const qualities = heights.length
+            ? heights.map(height => ({
+                value: height,
+                label: `${height}p`
+            }))
+            : [{ value: 0, label: "Best available" }];
+
+        res.json({
+            success: true,
+            title: info.title || "Untitled video",
+            thumbnail: info.thumbnail || "",
+            duration: info.duration || null,
+            uploader: info.uploader || info.channel || "",
+            qualities
+        });
+
+    } catch (error) {
+        console.error("Video info error:", error.message);
+
+        res.status(400).json({
+            error: error.killed
+                ? "The website took too long to respond."
+                : "Could not read this video. Check the link or try another supported website."
+        });
+    }
+});
+
+app.post("/api/file-download", async (req, res) => {
+    let folder;
+
+    try {
+        const input = req.body?.url;
+        const requestedHeight = Number(req.body?.height || 0);
+
+        if (typeof input !== "string" || !input.trim()) {
+            return res.status(400).json({ error: "Please paste a video link." });
         }
 
-        if (!response.ok) {
-            return res.status(400).json({
-                error: "The video host could not provide this file."
-            });
+        if (
+            !Number.isInteger(requestedHeight) ||
+            requestedHeight < 0 ||
+            requestedHeight > 2160
+        ) {
+            return res.status(400).json({ error: "Please select a valid video quality." });
         }
 
-        const contentType = response.headers.get("content-type") || "";
+        const url = await validateVideoURL(input.trim());
 
-        if (!contentType.toLowerCase().startsWith("video/")) {
-            return res.status(415).json({
-                error: "This link does not point directly to a video file."
-            });
+        folder = fs.mkdtempSync(path.join(os.tmpdir(), "vidora-"));
+
+        const format = requestedHeight
+            ? `bv*[height<=${requestedHeight}]+ba/b[height<=${requestedHeight}]/b`
+            : "bv*+ba/b";
+
+        const args = [
+            "--no-playlist",
+            "--no-warnings",
+            "--ignore-config",
+            "--socket-timeout", "30",
+            "--max-filesize", "500M",
+            "--format", format,
+            "--merge-output-format", "mp4",
+            "--output", path.join(folder, "vidora-video.%(ext)s"),
+            url
+        ];
+
+        await runYtDlp(args, 15 * 60 * 1000, 5 * 1024 * 1024);
+
+        const files = fs.readdirSync(folder)
+            .filter(name => fs.statSync(path.join(folder, name)).isFile());
+
+        if (!files.length) {
+            throw new Error("The downloader did not create a video file.");
         }
 
-        const contentLength = Number(
-            response.headers.get("content-length") || 0
-        );
+        const filePath = path.join(folder, files[0]);
+        const stats = fs.statSync(filePath);
 
-        const MAX_SIZE = 100 * 1024 * 1024;
-
-        if (contentLength > MAX_SIZE) {
-            controller.abort();
-
-            return res.status(413).json({
-                error: "This file is larger than the 100 MB limit."
-            });
+        if (!stats.size || stats.size > MAX_DOWNLOAD_BYTES) {
+            throw new Error("The video is empty or exceeds the 500 MB limit.");
         }
 
-        if (!response.body) {
-            return res.status(400).json({
-                error: "The video host returned an empty response."
-            });
-        }
+        res.download(filePath, "vidora-video.mp4", error => {
+            fs.rm(folder, { recursive: true, force: true }, () => {});
 
-        res.setHeader("Content-Type", contentType);
-        res.setHeader(
-            "Content-Disposition",
-            'attachment; filename="vidora-video.mp4"'
-        );
-
-        if (contentLength > 0) {
-            res.setHeader("Content-Length", contentLength);
-        }
-
-        let downloadedBytes = 0;
-
-        const sizeLimit = new Transform({
-            transform(chunk, encoding, callback) {
-                downloadedBytes += chunk.length;
-
-                if (downloadedBytes > MAX_SIZE) {
-                    callback(
-                        new Error("VIDEO_SIZE_LIMIT")
-                    );
-                    return;
-                }
-
-                callback(null, chunk);
+            if (error) {
+                console.error("Send download error:", error.message);
             }
         });
 
-        await pipeline(
-            Readable.fromWeb(response.body),
-            sizeLimit,
-            res
-        );
+        folder = null;
 
     } catch (error) {
         console.error("VIDORA download error:", error.message);
 
-        if (controller) {
-            controller.abort();
+        if (folder) {
+            fs.rm(folder, { recursive: true, force: true }, () => {});
         }
 
         if (!res.headersSent) {
-            let status = 400;
-            let errorMessage = error.message || "Unable to download this video.";
+            let message = "Download failed. This link may not be supported.";
 
-            if (error.name === "AbortError") {
-                errorMessage = "The video host took too long to respond.";
+            if (error.killed) {
+                message = "Download timed out. Try a shorter video.";
+            } else if (error.message.includes("not found")) {
+                message = "yt-dlp was not found. Check that it is installed and available in PATH.";
+            } else if (error.message.includes("500 MB")) {
+                message = error.message;
             }
 
-            if (error.message === "VIDEO_SIZE_LIMIT") {
-                status = 413;
-                errorMessage = "This file is larger than the 100 MB limit.";
-            }
-
-            res.status(status).json({
-                error: errorMessage
-            });
-        } else {
-            res.destroy(error);
+            res.status(400).json({ error: message });
         }
     }
 });
 
-// Export Express app for Vercel
 module.exports = app;
 
-// Start local server when running directly
 if (require.main === module) {
     const PORT = process.env.PORT || 3000;
 
@@ -245,3 +294,7 @@ if (require.main === module) {
         console.log(`VIDORA running at http://localhost:${PORT}`);
     });
 }
+
+
+
+

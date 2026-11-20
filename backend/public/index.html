@@ -1,9 +1,11 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="theme-color" content="#050b1d">
+    <meta name="description" content="VIDORA - A modern video downloader.">
     <title>VIDORA — Video Downloader</title>
     <link rel="stylesheet" href="style.css">
 </head>
@@ -38,7 +40,7 @@
 
                 <p class="hero-description">
                     Your videos, your freedom. A simple and modern place
-                    to access downloadable video files.
+                    to preview and download supported videos.
                 </p>
 
                 <div class="download-card" id="download">
@@ -46,7 +48,7 @@
                         <div class="card-icon">↓</div>
                         <div>
                             <h2>Video Downloader</h2>
-                            <p>Paste your direct video link below</p>
+                            <p>Paste a supported video link below</p>
                         </div>
                     </div>
 
@@ -56,17 +58,34 @@
                             <input type="url" id="videoUrl"
                                 placeholder="Paste your video URL here..." required>
                         </div>
+
                         <button type="submit" id="downloadBtn">
-                            <span id="buttonText">Download Video</span>
+                            <span id="buttonText">Find Video</span>
                             <span class="button-arrow">→</span>
                         </button>
                     </form>
 
-                    <div id="message" class="message"></div>
+                    <div id="message" class="message" aria-live="polite"></div>
+
+                    <div id="videoPreview" class="video-preview">
+                        <img id="videoThumbnail" src="" alt="Video thumbnail">
+                        <div class="video-details">
+                            <h3 id="videoTitle"></h3>
+                            <p id="videoUploader"></p>
+                            <p id="videoDuration"></p>
+                        </div>
+
+                        <label for="qualitySelect">Select video quality</label>
+                        <select id="qualitySelect"></select>
+
+                        <button type="button" id="startDownloadBtn">
+                            Download Selected Quality ↓
+                        </button>
+                    </div>
 
                     <div class="card-footer">
                         <span>✦ Simple</span>
-                        <span>✦ Fast</span>
+                        <span>✦ Smart</span>
                         <span>✦ Easy to use</span>
                     </div>
                 </div>
@@ -74,9 +93,9 @@
                 <div class="hero-stats">
                     <div><strong>01</strong><span>Paste Link</span></div>
                     <div class="stat-line"></div>
-                    <div><strong>02</strong><span>Download</span></div>
+                    <div><strong>02</strong><span>Choose Quality</span></div>
                     <div class="stat-line"></div>
-                    <div><strong>03</strong><span>Enjoy</span></div>
+                    <div><strong>03</strong><span>Download</span></div>
                 </div>
             </div>
 
@@ -125,8 +144,8 @@
                 </div>
                 <div class="feature-card">
                     <div class="feature-icon">↓</div>
-                    <h3>Direct Downloads</h3>
-                    <p>Download supported direct video file links.</p>
+                    <h3>Quality Options</h3>
+                    <p>Choose from the available video resolutions before downloading.</p>
                 </div>
             </div>
         </section>
@@ -136,8 +155,8 @@
             <span>ABOUT VIDORA</span>
             <h2>Less complexity.<br><span>More freedom.</span></h2>
             <p>
-                VIDORA is built to make supported video downloads
-                straightforward with a modern and easy interface.
+                VIDORA brings video information and supported downloads
+                together in a modern and easy interface.
             </p>
         </section>
     </main>
