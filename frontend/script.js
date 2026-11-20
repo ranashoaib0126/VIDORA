@@ -1,88 +1,113 @@
 
-const videoInput = document.getElementById("videoUrl");
-const downloadButton = document.getElementById("downloadBtn");
-const message = document.getElementById("message");
+const particlesContainer = document.getElementById("particles");
 
-// Create animated background particles
-const particleContainer = document.getElementById("particles");
+// Animated background particles
+for (let i = 0; i < 45; i++) {
+    const particle = document.createElement("span");
+    particle.className = "particle";
 
-if (particleContainer) {
-    for (let i = 0; i < 45; i++) {
-        const particle = document.createElement("span");
-        particle.className = "particle";
-        particle.style.left = Math.random() * 100 + "%";
-        particle.style.top = Math.random() * 100 + "%";
-        particle.style.animationDelay = -Math.random() * 8 + "s";
-        particle.style.animationDuration = 5 + Math.random() * 7 + "s";
-        particleContainer.appendChild(particle);
-    }
+    particle.style.left = Math.random() * 100 + "%";
+    particle.style.animationDuration = (8 + Math.random() * 15) + "s";
+    particle.style.animationDelay = (Math.random() * 12) + "s";
+    particle.style.opacity = Math.random() * 0.7 + 0.2;
+
+    particlesContainer.appendChild(particle);
 }
 
-function showMessage(text, type = "") {
+// Download form
+const downloadForm = document.getElementById("downloadForm");
+const videoUrl = document.getElementById("videoUrl");
+const downloadBtn = document.getElementById("downloadBtn");
+const buttonText = document.getElementById("buttonText");
+const message = document.getElementById("message");
+
+function showMessage(text, type) {
     message.textContent = text;
     message.className = "message " + type;
 }
 
-downloadButton.addEventListener("click", async () => {
-    const videoUrl = videoInput.value.trim();
+function resetButton() {
+    downloadBtn.disabled = false;
+    buttonText.textContent = "Download Video";
+}
 
-    if (!videoUrl) {
+downloadForm.addEventListener("submit", async function (event) {
+    event.preventDefault();
+
+    const url = videoUrl.value.trim();
+
+    if (!url) {
         showMessage("Please paste a video URL first.", "error");
-        videoInput.focus();
         return;
     }
 
     let parsedUrl;
 
     try {
-        parsedUrl = new URL(videoUrl);
+        parsedUrl = new URL(url);
     } catch {
         showMessage("Please enter a valid video URL.", "error");
         return;
     }
 
     if (parsedUrl.protocol !== "https:") {
-        showMessage("Only HTTPS video links are supported.", "error");
+        showMessage("Please use a secure HTTPS video link.", "error");
         return;
     }
 
-    downloadButton.disabled = true;
-    downloadButton.textContent = "Processing...";
-    showMessage("Checking your video link...");
+    downloadBtn.disabled = true;
+    buttonText.textContent = "Processing...";
+    showMessage("Please wait. Checking your video link...", "loading");
 
     try {
         const response = await fetch("/api/file-download", {
             method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ url: videoUrl })
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify({ url })
         });
 
         if (!response.ok) {
-            const data = await response.json().catch(() => ({}));
-            throw new Error(data.error || "This video link could not be downloaded.");
+            let errorMessage = "Unable to download this video.";
+
+            try {
+                const errorData = await response.json();
+                errorMessage = errorData.error || errorMessage;
+            } catch {}
+
+            throw new Error(errorMessage);
+        }
+
+        const contentType = response.headers.get("content-type") || "";
+
+        if (!contentType.toLowerCase().startsWith("video/")) {
+            throw new Error("The server did not return a supported video file.");
         }
 
         const blob = await response.blob();
-        const objectUrl = URL.createObjectURL(blob);
+
+        if (!blob.size) {
+            throw new Error("The downloaded file is empty.");
+        }
+
+        const downloadUrl = URL.createObjectURL(blob);
         const link = document.createElement("a");
 
-        link.href = objectUrl;
+        link.href = downloadUrl;
         link.download = "vidora-video";
         document.body.appendChild(link);
         link.click();
         link.remove();
 
-        setTimeout(() => URL.revokeObjectURL(objectUrl), 60000);
-        showMessage("Your download has started!", "success");
+        setTimeout(() => URL.revokeObjectURL(downloadUrl), 60000);
+
+        showMessage("Your video download has started!", "success");
+        videoUrl.value = "";
 
     } catch (error) {
-        showMessage(error.message || "Something went wrong. Try another direct video link.", "error");
+        showMessage(error.message || "Something went wrong. Please try again.", "error");
     } finally {
-        downloadButton.disabled = false;
-        downloadButton.textContent = "Download →";
+        resetButton();
     }
-});
-
-videoInput.addEventListener("keydown", event => {
-    if (event.key === "Enter") downloadButton.click();
 });

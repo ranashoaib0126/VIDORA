@@ -3,49 +3,47 @@ const express = require("express");
 const path = require("path");
 const dns = require("dns").promises;
 const net = require("net");
+const { Readable, Transform } = require("stream");
+const { pipeline } = require("stream/promises");
 
 const app = express();
 
 app.use(express.json({ limit: "10kb" }));
 
-// Serve the VIDORA frontend
-app.use(express.static(path.join(__dirname, "public")));
+// Local development: serve frontend files from public
+// Vercel serves public assets separately.
+if (process.env.VERCEL !== "1") {
+    app.use(express.static(path.join(__dirname, "public")));
+}
 
-// Check whether an IP address is public
-function isPublicIP(ip) {
-    if (net.isIPv4(ip)) {
-        const parts = ip.split(".").map(Number);
-        const [a, b] = parts;
+// Check whether an IPv4 address is publicly routable
+function isPublicIPv4(ip) {
+    if (!net.isIPv4(ip)) return false;
 
-        if (
-            a === 10 ||
-            a === 127 ||
-            a === 0 ||
-            (a === 169 && b === 254) ||
-            (a === 172 && b >= 16 && b <= 31) ||
-            (a === 192 && b === 168) ||
-            a >= 224
-        ) return false;
+    const p = ip.split(".").map(Number);
+    const a = p[0];
+    const b = p[1];
+    const c = p[2];
 
-        return true;
+    if (
+        a === 0 ||
+        a === 10 ||
+        a === 127 ||
+        a >= 224 ||
+        (a === 100 && b >= 64 && b <= 127) ||
+        (a === 169 && b === 254) ||
+        (a === 172 && b >= 16 && b <= 31) ||
+        (a === 192 && b === 168) ||
+        (a === 192 && b === 0 && c === 0) ||
+        (a === 192 && b === 0 && c === 2) ||
+        (a === 198 && (b === 18 || b === 19)) ||
+        (a === 198 && b === 51 && c === 100) ||
+        (a === 203 && b === 0 && c === 113)
+    ) {
+        return false;
     }
 
-    if (net.isIPv6(ip)) {
-        const address = ip.toLowerCase();
-
-        if (
-            address === "::1" ||
-            address === "::" ||
-            address.startsWith("fc") ||
-            address.startsWith("fd") ||
-            address.startsWith("fe80:") ||
-            address.startsWith("::ffff:127.")
-        ) return false;
-
-        return true;
-    }
-
-    return false;
+    return true;
 }
 
 // Validate direct video URL
@@ -73,20 +71,41 @@ async function validateVideoURL(value) {
         hostname.endsWith(".localhost") ||
         hostname.endsWith(".local")
     ) {
-        throw new Error("This host is not allowed.");
+        throw new Error("This video host is not allowed.");
     }
 
-    const records = await dns.lookup(hostname, { all: true });
+    // Reject IP literals unless they are public IPv4 addresses
+    if (net.isIP(hostname)) {
+        if (!isPublicIPv4(hostname)) {
+            throw new Error("This video host is not allowed.");
+        }
+    } else {
+        const records = await dns.lookup(hostname, { all: true });
 
-    if (!records.length || records.some(record => !isPublicIP(record.address))) {
-        throw new Error("This video host is not allowed.");
+        if (
+            !records.length ||
+            records.some(record => !isPublicIPv4(record.address))
+        ) {
+            throw new Error("This video host is not allowed.");
+        }
     }
 
     return url;
 }
 
-// Download a direct video file
+// Health check
+app.get("/api/health", (req, res) => {
+    res.json({
+        success: true,
+        app: "VIDORA",
+        status: "running"
+    });
+});
+
+// Video download API
 app.post("/api/file-download", async (req, res) => {
+    let controller;
+
     try {
         const input = req.body?.url;
 
@@ -98,8 +117,11 @@ app.post("/api/file-download", async (req, res) => {
 
         const url = await validateVideoURL(input.trim());
 
-        const controller = new AbortController();
-        const timeout = setTimeout(() => controller.abort(), 45000);
+        controller = new AbortController();
+
+        const timeout = setTimeout(() => {
+            controller.abort();
+        }, 45000);
 
         let response;
 
@@ -130,64 +152,96 @@ app.post("/api/file-download", async (req, res) => {
             });
         }
 
-        const contentLength = Number(response.headers.get("content-length") || 0);
+        const contentLength = Number(
+            response.headers.get("content-length") || 0
+        );
 
-        if (contentLength > 100 * 1024 * 1024) {
+        const MAX_SIZE = 100 * 1024 * 1024;
+
+        if (contentLength > MAX_SIZE) {
+            controller.abort();
+
             return res.status(413).json({
                 error: "This file is larger than the 100 MB limit."
+            });
+        }
+
+        if (!response.body) {
+            return res.status(400).json({
+                error: "The video host returned an empty response."
             });
         }
 
         res.setHeader("Content-Type", contentType);
         res.setHeader(
             "Content-Disposition",
-            'attachment; filename="vidora-video"'
+            'attachment; filename="vidora-video.mp4"'
         );
 
         if (contentLength > 0) {
             res.setHeader("Content-Length", contentLength);
         }
 
-        const buffer = Buffer.from(await response.arrayBuffer());
+        let downloadedBytes = 0;
 
-        if (buffer.length > 100 * 1024 * 1024) {
-            return res.status(413).json({
-                error: "This file is larger than the 100 MB limit."
-            });
-        }
+        const sizeLimit = new Transform({
+            transform(chunk, encoding, callback) {
+                downloadedBytes += chunk.length;
 
-        res.send(buffer);
+                if (downloadedBytes > MAX_SIZE) {
+                    callback(
+                        new Error("VIDEO_SIZE_LIMIT")
+                    );
+                    return;
+                }
+
+                callback(null, chunk);
+            }
+        });
+
+        await pipeline(
+            Readable.fromWeb(response.body),
+            sizeLimit,
+            res
+        );
 
     } catch (error) {
         console.error("VIDORA download error:", error.message);
 
+        if (controller) {
+            controller.abort();
+        }
+
         if (!res.headersSent) {
-            res.status(400).json({
-                error: error.name === "AbortError"
-                    ? "The video host took too long to respond."
-                    : error.message || "Unable to download this video."
+            let status = 400;
+            let errorMessage = error.message || "Unable to download this video.";
+
+            if (error.name === "AbortError") {
+                errorMessage = "The video host took too long to respond.";
+            }
+
+            if (error.message === "VIDEO_SIZE_LIMIT") {
+                status = 413;
+                errorMessage = "This file is larger than the 100 MB limit.";
+            }
+
+            res.status(status).json({
+                error: errorMessage
             });
+        } else {
+            res.destroy(error);
         }
     }
 });
 
-// Health check
-app.get("/api/health", (req, res) => {
-    res.json({
-        success: true,
-        app: "VIDORA",
-        status: "running"
-    });
-});
-
-// Vercel serverless entry point
+// Export Express app for Vercel
 module.exports = app;
 
-// Local development
+// Start local server when running directly
 if (require.main === module) {
-    const PORT = process.env.PORT || 10000;
+    const PORT = process.env.PORT || 3000;
 
     app.listen(PORT, () => {
-        console.log(`VIDORA server running on port ${PORT}`);
+        console.log(`VIDORA running at http://localhost:${PORT}`);
     });
 }

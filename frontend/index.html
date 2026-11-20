@@ -2,143 +2,186 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<meta name="theme-color" content="#050b19">
-<title>VIDORA | Future of Video</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="./style.css">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#050b1d">
+    <title>VIDORA — Video Downloader</title>
+    <link rel="stylesheet" href="style.css">
 </head>
 <body>
 
-<div class="scene">
-    <div class="grid-floor"></div>
-    <div class="orb orb-one"></div>
-    <div class="orb orb-two"></div>
-    <div class="particles" id="particles"></div>
-</div>
+    <div class="background-grid"></div>
+    <div class="glow glow-one"></div>
+    <div class="glow glow-two"></div>
+    <div id="particles"></div>
 
-<header>
-    <a href="#home" class="logo">VIDORA<span>.</span></a>
-    <nav>
-        <a href="#home">Home</a>
-        <a href="#downloader">Downloader</a>
-        <a href="#features">Features</a>
-        <a href="#about">About</a>
-    </nav>
-    <a href="#downloader" class="header-btn">Get Started ↗</a>
-</header>
+    <header class="navbar">
+        <a href="#" class="logo">
+            <span class="logo-icon">V</span>
+            <span>VIDORA<span class="logo-dot">.</span></span>
+        </a>
 
-<main>
-<section class="hero" id="home">
-    <div class="hero-content">
-        <div class="eyebrow"><span class="live-dot"></span> THE FUTURE OF VIDEO</div>
-        <h1>Experience<br>Video <span>Without Limits.</span></h1>
-        <p class="hero-description">
-            A smarter, cleaner and modern way to access your supported video files.
-            Experience the next generation of video convenience.
-        </p>
-        <div class="hero-actions">
-            <a href="#downloader" class="primary-btn">Start Exploring <span>→</span></a>
-            <a href="#about" class="secondary-btn">Discover VIDORA</a>
-        </div>
-        <div class="hero-stats">
-            <div><strong>01</strong><small>Simple</small></div>
-            <div><strong>02</strong><small>Modern</small></div>
-            <div><strong>03</strong><small>Convenient</small></div>
-        </div>
-    </div>
+        <nav>
+            <a href="#home">Home</a>
+            <a href="#features">Features</a>
+            <a href="#about">About</a>
+        </nav>
 
-    <div class="hero-art">
-        <div class="orbit orbit-a"></div>
-        <div class="orbit orbit-b"></div>
-        <div class="orbit orbit-c"></div>
-        <div class="core">
-            <div class="core-inner">▶</div>
-        </div>
-        <div class="floating-chip chip-one">✦ VIDEO ENGINE</div>
-        <div class="floating-chip chip-two">HD EXPERIENCE</div>
-        <div class="floating-chip chip-three">VIDORA 01</div>
-    </div>
-</section>
+        <a href="#download" class="nav-button">Get Started <span>↗</span></a>
+    </header>
 
-<section class="downloader-section" id="downloader">
-    <div class="section-heading">
-        <span class="eyebrow">YOUR VIDEO STARTS HERE</span>
-        <h2>Make It <span>Yours.</span></h2>
-        <p>Paste a direct video file URL to get started.</p>
-    </div>
+    <main id="home">
 
-    <div class="downloader-card">
-        <div class="card-top">
-            <div class="card-icon">▶</div>
-            <div>
-                <h3>Video Downloader</h3>
-                <p>Enter your supported video link below</p>
+        <section class="hero">
+
+            <div class="hero-content">
+                <div class="status-pill">
+                    <span class="status-dot"></span>
+                    YOUR SMART VIDEO TOOL
+                </div>
+
+                <h1>
+                    Download Videos.
+                    <span>Your Way.</span>
+                </h1>
+
+                <p class="hero-description">
+                    Your videos, your freedom. A simple and modern place
+                    to access downloadable video files.
+                </p>
+
+                <div class="download-card" id="download">
+                    <div class="card-heading">
+                        <div class="card-icon">↓</div>
+                        <div>
+                            <h2>Video Downloader</h2>
+                            <p>Paste your direct video link below</p>
+                        </div>
+                    </div>
+
+                    <form id="downloadForm">
+                        <div class="input-wrapper">
+                            <span class="link-icon">↗</span>
+                            <input
+                                type="url"
+                                id="videoUrl"
+                                placeholder="Paste your video URL here..."
+                                required
+                            >
+                        </div>
+
+                        <button type="submit" id="downloadBtn">
+                            <span id="buttonText">Download Video</span>
+                            <span class="button-arrow">→</span>
+                        </button>
+                    </form>
+
+                    <div id="message" class="message"></div>
+
+                    <div class="card-footer">
+                        <span>✦ Simple</span>
+                        <span>✦ Fast</span>
+                        <span>✦ Easy to use</span>
+                    </div>
+                </div>
+
+                <div class="hero-stats">
+                    <div>
+                        <strong>01</strong>
+                        <span>Paste Link</span>
+                    </div>
+                    <div class="stat-line"></div>
+                    <div>
+                        <strong>02</strong>
+                        <span>Download</span>
+                    </div>
+                    <div class="stat-line"></div>
+                    <div>
+                        <strong>03</strong>
+                        <span>Enjoy</span>
+                    </div>
+                </div>
             </div>
-            <span class="secure-badge">● SECURE</span>
-        </div>
 
-        <label for="videoUrl">VIDEO URL</label>
-        <div class="input-row">
-            <input type="url" id="videoUrl"
-                placeholder="https://example.com/video.mp4"
-                autocomplete="url">
-            <button id="downloadBtn" type="button">Download <span>→</span></button>
-        </div>
+            <div class="visual-area">
+                <div class="orbit orbit-one"></div>
+                <div class="orbit orbit-two"></div>
+                <div class="orbit orbit-three"></div>
 
-        <p id="message" class="message" aria-live="polite"></p>
-        <div class="card-footer">
-            <span>🔒 Secure connection</span>
-            <span>Direct video links supported</span>
-        </div>
-    </div>
-</section>
+                <div class="sphere">
+                    <div class="sphere-shine"></div>
+                    <div class="sphere-inner">
+                        <div class="play-symbol"></div>
+                    </div>
+                </div>
 
-<section class="features-section" id="features">
-    <div class="section-heading">
-        <span class="eyebrow">DESIGNED FOR SIMPLICITY</span>
-        <h2>Technology Meets <span>Experience.</span></h2>
-    </div>
+                <div class="floating-card floating-top">
+                    <span class="floating-icon">✦</span>
+                    <div>
+                        <strong>VIDORA</strong>
+                        <small>Video experience</small>
+                    </div>
+                </div>
 
-    <div class="feature-grid">
-        <article class="feature-card">
-            <div class="feature-icon">✦</div>
-            <h3>Modern Experience</h3>
-            <p>A clean and futuristic interface built around simplicity.</p>
-        </article>
-        <article class="feature-card">
-            <div class="feature-icon">◈</div>
-            <h3>Easy To Use</h3>
-            <p>Paste a supported direct video URL and get started.</p>
-        </article>
-        <article class="feature-card">
-            <div class="feature-icon">⌁</div>
-            <h3>Secure Requests</h3>
-            <p>HTTPS-only links with server-side validation.</p>
-        </article>
-    </div>
-</section>
+                <div class="floating-card floating-bottom">
+                    <span class="download-symbol">↓</span>
+                    <div>
+                        <strong>Ready to go</strong>
+                        <small>Your video journey</small>
+                    </div>
+                </div>
 
-<section class="about-section" id="about">
-    <div>
-        <span class="eyebrow">ABOUT VIDORA</span>
-        <h2>Beyond Ordinary.<br><span>Built For Tomorrow.</span></h2>
-    </div>
-    <p>
-        VIDORA brings together a futuristic interface and a convenient
-        experience for supported direct video files. Download access
-        depends on the source and content-owner permissions.
-    </p>
-</section>
-</main>
+                <div class="blue-light"></div>
+            </div>
 
-<footer>
-    <a href="#home" class="logo">VIDORA<span>.</span></a>
-    <p>© 2026 VIDORA. All rights reserved.</p>
-</footer>
+        </section>
 
-<script src="./script.js" defer></script>
+        <section class="features-section" id="features">
+            <div class="section-heading">
+                <span>WHY VIDORA</span>
+                <h2>A better way to download</h2>
+                <p>Everything you need in one clean experience.</p>
+            </div>
+
+            <div class="feature-grid">
+                <div class="feature-card">
+                    <div class="feature-icon">⚡</div>
+                    <h3>Simple Experience</h3>
+                    <p>Easy-to-use interface designed to keep things simple.</p>
+                </div>
+
+                <div class="feature-card">
+                    <div class="feature-icon">◇</div>
+                    <h3>Modern Design</h3>
+                    <p>A futuristic interface with a clean visual experience.</p>
+                </div>
+
+                <div class="feature-card">
+                    <div class="feature-icon">↓</div>
+                    <h3>Direct Downloads</h3>
+                    <p>Download supported direct video file links.</p>
+                </div>
+            </div>
+        </section>
+
+        <section class="about-section" id="about">
+            <div class="about-line"></div>
+            <span>ABOUT VIDORA</span>
+            <h2>Less complexity.<br><span>More freedom.</span></h2>
+            <p>
+                VIDORA is built to make supported video downloads
+                straightforward with a modern and easy interface.
+            </p>
+        </section>
+
+    </main>
+
+    <footer>
+        <a href="#" class="footer-logo">VIDORA<span>.</span></a>
+        <p>© 2026 VIDORA. All rights reserved.</p>
+        <a href="#home">Back to top ↑</a>
+    </footer>
+
+    <script src="script.js"></script>
 </body>
 </html>
